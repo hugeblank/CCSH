@@ -1,6 +1,7 @@
 local tputcols = { 255, 214, 207, 75, 226, 118, 219, 237, 241, 38, 135, 21, 94, 34, 196, 232, 256 }
 local vals = {} --x, y, bg, fg
 local screen = {}
+local term = io.open("/tmp/render.sh", "w")
 
 local function totput(color)
   return tputcols[math.log(color, 2)+1]
@@ -24,9 +25,10 @@ end
 local function redraw() --make efficient-er !!!
   for i = 1, #screen do --re-render screen buffer. term.write()-esque
     if onScreen(screen[i].x, screen[i].y) then
-      os.execute("tput cup "..(screen[i].y-1).." "..(screen[i].x-1).."; tput setab "..totput(screen[i].bg).."; tput setaf "..totput(screen[i].fg).."; printf \""..screen[i].obj.."\"")
+      term:write("tput cup "..(screen[i].y-1).." "..(screen[i].x-1).."; tput setab "..totput(screen[i].bg).."; tput setaf "..totput(screen[i].fg).."; printf \""..screen[i].obj.."\"")
     end
   end
+  term:flush()
 end
 
 getSize = function()
@@ -40,9 +42,10 @@ setCursorPos = function(x, y)
   local x0, y0 = getSize()
   repeat until x0
   if onScreen(x, y) then
-    os.execute("tput cup "..(y-1).." "..(x-1))
+    term:write("tput cup "..(y-1).." "..(x-1))
   end
   vals.x, vals.y = x, y
+  term:flush()
 end
 
 getCursorPos = function()
@@ -56,7 +59,6 @@ end
 setTextColor = function(color)
   if math.log(color, 2) == math.floor(math.log(color, 2)) and totput(color) then
     vals.fg = color
-    os.execute("tput setaf "..totput(color))
   else
     error("Invalid color, (got "..color..")", 2)
   end
@@ -69,7 +71,6 @@ end
 setBackgroundColor = function(color)
   if math.log(color, 2) == math.floor(math.log(color, 2)) and totput(color) then
     vals.bg = color
-    os.execute("tput setab "..totput(color))
   else
     error("Invalid color, (got "..color..")", 2)
   end
@@ -85,10 +86,11 @@ write = function(str) --holy slow as balls!
     else
       lin = -1
     end
-    os.execute("tput setab "..totput(vals.bg).."; tput setaf "..totput(vals.fg).."; printf \""..str:sub(1, lin).."\"")
+    term:write("tput setab "..totput(vals.bg).."; tput setaf "..totput(vals.fg).."; printf \""..str:sub(1, lin).."\"")
     vals.x = vals.x+lin
   end
   addobj(x, y, getBackgroundColor(), getTextColor(), str)
+  term:flush()
 end
 
 blit = function(text, fg, bg)
@@ -134,6 +136,8 @@ clear = function()
   screen = {}
   local x, y = getSize()
   setCursorPos(1, 1)
+  term:close()
+  term = io.open("/tmp/render.sh", "w")
   write(string.rep("\n"..string.rep(" ", x), y))
   setCursorPos(1, 1)
 end

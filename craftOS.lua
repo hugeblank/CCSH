@@ -1,5 +1,9 @@
 dofile("./rom/fs.lua")
 dofile("./rom/os.lua")
+
+local file = fs.open("/tmp/render.sh", "w")
+file:close()
+
 local files = fs.list("./rom")
 for i = 1, #files do
   if not fs.isDir("./rom/"..files[i]) and (files[i] ~= "fs.lua" and files[i] ~= "os.lua") then
@@ -7,4 +11,7 @@ for i = 1, #files do
       os.loadAPI("./rom/"..files[i])
   end
 end
---os.execute("lua")-- ./rom/bios.lua")
+
+
+os.execute("./rom/bin/term_update.sh & lua")
+
